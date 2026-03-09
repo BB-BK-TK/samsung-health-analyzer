@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react"
-
-import { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { GlassCard } from "./glass-card";
 
@@ -33,14 +31,74 @@ const toneOptions = [
   { id: "direct", label: "팩트 직설형", icon: "🔥" },
 ];
 
+const DEFAULT_BIRTH_DATE = "1990-01-01";
+
+function toTwoDigits(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function isValidISODateString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [yStr, mStr, dStr] = value.split("-");
+  const y = Number(yStr);
+  const m = Number(mStr);
+  const d = Number(dStr);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return false;
+  if (m < 1 || m > 12) return false;
+  if (d < 1 || d > 31) return false;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === m - 1 &&
+    dt.getUTCDate() === d
+  );
+}
+
+function normalizeBirthDateInput(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Accept: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  // Accept: YYYYMMDD
+  if (/^\d{8}$/.test(trimmed)) {
+    return `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
+  }
+
+  // Accept: YYYY/M/D, YYYY.M.D, YYYY-M-D
+  const parts = trimmed.split(/[./-]/).filter(Boolean);
+  if (parts.length === 3 && /^\d{4}$/.test(parts[0])) {
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const d = Number(parts[2]);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+    return `${y}-${toTwoDigits(m)}-${toTwoDigits(d)}`;
+  }
+
+  return null;
+}
+
 export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
   const [formData, setFormData] = useState<BirthInfo>({
-    birthDate: "",
+    birthDate: DEFAULT_BIRTH_DATE,
     birthTime: "",
     birthPlace: "",
     interests: [],
     toneStyle: "warm",
   });
+
+  const [birthDateMode, setBirthDateMode] = useState<"picker" | "manual">("picker");
+  const [manualBirthDate, setManualBirthDate] = useState(DEFAULT_BIRTH_DATE);
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+
+  const todayIso = useMemo(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = toTwoDigits(today.getMonth() + 1);
+    const d = toTwoDigits(today.getDate());
+    return `${y}-${m}-${d}`;
+  }, []);
 
   const toggleInterest = (id: string) => {
     setFormData((prev) => ({
@@ -67,21 +125,115 @@ export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
             <label className="block text-sm text-text-secondary mb-2">
               생년월일 <span className="text-accent-purple">*</span>
             </label>
-            <input
-              type="date"
-              required
-              value={formData.birthDate}
-              onChange={(e) =>
-                setFormData({ ...formData, birthDate: e.target.value })
-              }
-              className={cn(
-                "w-full h-[52px] px-4 rounded-xl",
-                "bg-secondary border border-glass-border",
-                "text-text-primary placeholder:text-text-muted",
-                "focus:outline-none focus:border-accent-purple focus:shadow-[0_0_20px_rgba(139,127,212,0.2)]",
-                "transition-all duration-200"
+            <div className="space-y-2">
+              {birthDateMode === "picker" ? (
+                <input
+                  type="date"
+                  required
+                  min="1900-01-01"
+                  max={todayIso}
+                  value={formData.birthDate}
+                  onChange={(e) => {
+                    setBirthDateError(null);
+                    setFormData({ ...formData, birthDate: e.target.value });
+                    setManualBirthDate(e.target.value);
+                  }}
+                  className={cn(
+                    "w-full h-[52px] px-4 rounded-xl",
+                    "bg-secondary border border-glass-border",
+                    "text-text-primary placeholder:text-text-muted",
+                    "focus:outline-none focus:border-accent-purple focus:shadow-[0_0_20px_rgba(139,127,212,0.2)]",
+                    "transition-all duration-200"
+                  )}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="bday"
+                    placeholder="예: 1990-01-01 또는 19900101"
+                    value={manualBirthDate}
+                    onChange={(e) => {
+                      const nextRaw = e.target.value;
+                      setManualBirthDate(nextRaw);
+                      setBirthDateError(null);
+
+                      const normalized = normalizeBirthDateInput(nextRaw);
+                      if (normalized && isValidISODateString(normalized)) {
+                        if (normalized > todayIso) {
+                          setBirthDateError("미래 날짜는 입력할 수 없어요.");
+                          return;
+                        }
+                        if (normalized < "1900-01-01") {
+                          setBirthDateError("1900년 이후 날짜를 입력해 주세요.");
+                          return;
+                        }
+                        setFormData({ ...formData, birthDate: normalized });
+                      }
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizeBirthDateInput(manualBirthDate);
+                      if (!normalized) {
+                        setBirthDateError("생년월일을 입력해 주세요. (YYYY-MM-DD)");
+                        return;
+                      }
+                      if (!isValidISODateString(normalized)) {
+                        setBirthDateError("올바른 날짜 형식이 아니에요. (YYYY-MM-DD)");
+                        return;
+                      }
+                      if (normalized > todayIso) {
+                        setBirthDateError("미래 날짜는 입력할 수 없어요.");
+                        return;
+                      }
+                      if (normalized < "1900-01-01") {
+                        setBirthDateError("1900년 이후 날짜를 입력해 주세요.");
+                        return;
+                      }
+
+                      setBirthDateError(null);
+                      setManualBirthDate(normalized);
+                      setFormData({ ...formData, birthDate: normalized });
+                    }}
+                    aria-invalid={birthDateError ? "true" : "false"}
+                    className={cn(
+                      "w-full h-[52px] px-4 rounded-xl",
+                      "bg-secondary border border-glass-border",
+                      "text-text-primary placeholder:text-text-muted",
+                      "focus:outline-none focus:border-accent-purple focus:shadow-[0_0_20px_rgba(139,127,212,0.2)]",
+                      "transition-all duration-200",
+                      birthDateError && "border-red-400/70 focus:border-red-400"
+                    )}
+                  />
+                  {birthDateError && (
+                    <p className="text-xs text-red-300">{birthDateError}</p>
+                  )}
+                </div>
               )}
-            />
+
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-muted">
+                  빠르게 선택하려면 기본값(1990-01-01)에서 수정해 주세요.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBirthDateError(null);
+                    setBirthDateMode((prev) => {
+                      const next = prev === "picker" ? "manual" : "picker";
+                      if (next === "manual") setManualBirthDate(formData.birthDate || DEFAULT_BIRTH_DATE);
+                      return next;
+                    });
+                  }}
+                  className={cn(
+                    "text-xs px-3 py-1 rounded-full border transition-colors",
+                    "border-glass-border text-text-secondary hover:border-glass-highlight"
+                  )}
+                >
+                  {birthDateMode === "picker" ? "직접 입력" : "달력 선택"}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div>
