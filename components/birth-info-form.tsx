@@ -10,6 +10,8 @@ interface BirthInfoFormProps {
 }
 
 export interface BirthInfo {
+  name: string;
+  calendarType: "solar" | "lunar";
   birthDate: string;
   birthTime: string;
   birthPlace: string;
@@ -18,11 +20,12 @@ export interface BirthInfo {
 }
 
 const interestOptions = [
-  { id: "love", label: "연애/관계" },
-  { id: "career", label: "커리어" },
+  { id: "career_money", label: "커리어/돈" },
+  { id: "love_relationship", label: "연애/관계" },
   { id: "health", label: "건강" },
-  { id: "money", label: "재정" },
+  { id: "family", label: "가족" },
   { id: "mental", label: "멘탈" },
+  { id: "overall", label: "총운" },
 ];
 
 const toneOptions = [
@@ -32,6 +35,22 @@ const toneOptions = [
 ];
 
 const DEFAULT_BIRTH_DATE = "1990-01-01";
+
+const birthTimeOptions = [
+  { value: "", label: "모름 (선택 안 함)" },
+  { value: "23:30", label: "자시 (23:00-00:59)" },
+  { value: "01:30", label: "축시 (01:00-02:59)" },
+  { value: "03:30", label: "인시 (03:00-04:59)" },
+  { value: "05:30", label: "묘시 (05:00-06:59)" },
+  { value: "07:30", label: "진시 (07:00-08:59)" },
+  { value: "09:30", label: "사시 (09:00-10:59)" },
+  { value: "11:30", label: "오시 (11:00-12:59)" },
+  { value: "13:30", label: "미시 (13:00-14:59)" },
+  { value: "15:30", label: "신시 (15:00-16:59)" },
+  { value: "17:30", label: "유시 (17:00-18:59)" },
+  { value: "19:30", label: "술시 (19:00-20:59)" },
+  { value: "21:30", label: "해시 (21:00-22:59)" },
+] as const;
 
 function toTwoDigits(n: number) {
   return String(n).padStart(2, "0");
@@ -81,6 +100,8 @@ function normalizeBirthDateInput(raw: string) {
 
 export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
   const [formData, setFormData] = useState<BirthInfo>({
+    name: "",
+    calendarType: "solar",
     birthDate: DEFAULT_BIRTH_DATE,
     birthTime: "",
     birthPlace: "",
@@ -122,6 +143,63 @@ export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
         </h2>
         <div className="space-y-4">
           <div>
+            <label className="block text-sm text-text-secondary mb-2">
+              이름 <span className="text-text-muted">(선택)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="예: 홍길동"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className={cn(
+                "w-full h-[52px] px-4 rounded-xl",
+                "bg-secondary border border-glass-border",
+                "text-text-primary placeholder:text-text-muted",
+                "focus:outline-none focus:border-accent-purple focus:shadow-[0_0_20px_rgba(139,127,212,0.2)]",
+                "transition-all duration-200"
+              )}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-text-secondary mb-2">
+              달력 유형 <span className="text-accent-purple">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, calendarType: "solar" })}
+                className={cn(
+                  "h-[44px] rounded-xl text-sm transition-all duration-200 border",
+                  formData.calendarType === "solar"
+                    ? "bg-accent-purple/15 border-accent-purple text-text-primary"
+                    : "bg-secondary/50 border-glass-border text-text-secondary hover:border-glass-highlight"
+                )}
+              >
+                양력
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, calendarType: "lunar" })}
+                className={cn(
+                  "h-[44px] rounded-xl text-sm transition-all duration-200 border",
+                  formData.calendarType === "lunar"
+                    ? "bg-accent-purple/15 border-accent-purple text-text-primary"
+                    : "bg-secondary/50 border-glass-border text-text-secondary hover:border-glass-highlight"
+                )}
+              >
+                음력
+              </button>
+            </div>
+            {formData.calendarType === "lunar" && (
+              <p className="text-xs text-text-muted mt-2">
+                음력 변환은 준비 중이라, 현재는 입력값이 양력처럼 처리될 수 있어요.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
             <label className="block text-sm text-text-secondary mb-2">
               생년월일 <span className="text-accent-purple">*</span>
             </label>
@@ -234,26 +312,33 @@ export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
                 </button>
               </div>
             </div>
-          </div>
+            </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-2">
-              태어난 시간 <span className="text-text-muted">(선택)</span>
-            </label>
-            <input
-              type="time"
-              value={formData.birthTime}
-              onChange={(e) =>
-                setFormData({ ...formData, birthTime: e.target.value })
-              }
-              className={cn(
-                "w-full h-[52px] px-4 rounded-xl",
-                "bg-secondary border border-glass-border",
-                "text-text-primary placeholder:text-text-muted",
-                "focus:outline-none focus:border-accent-purple focus:shadow-[0_0_20px_rgba(139,127,212,0.2)]",
-                "transition-all duration-200"
-              )}
-            />
+            <div>
+              <label className="block text-sm text-text-secondary mb-2">
+                태어난 시간 <span className="text-text-muted">(선택)</span>
+              </label>
+              <select
+                value={formData.birthTime}
+                onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
+                className={cn(
+                  "w-full h-[52px] px-4 rounded-xl",
+                  "bg-secondary border border-glass-border",
+                  "text-text-primary placeholder:text-text-muted",
+                  "focus:outline-none focus:border-accent-purple focus:shadow-[0_0_20px_rgba(139,127,212,0.2)]",
+                  "transition-all duration-200"
+                )}
+              >
+                {birthTimeOptions.map((opt) => (
+                  <option key={opt.value || "unknown"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-text-muted mt-2">
+                사주앱 방식(자/축/…/해시)으로 선택하면 해당 구간의 대표 시간으로 계산돼요.
+              </p>
+            </div>
           </div>
 
           <div>
@@ -359,7 +444,7 @@ export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
           </>
         ) : (
           <>
-            <span>✦</span> 운세 생성하기
+            <span>✦</span> 복합 운세 생성하기
           </>
         )}
       </button>
@@ -368,10 +453,12 @@ export function BirthInfoForm({ onSubmit, isLoading }: BirthInfoFormProps) {
         type="button"
         onClick={() =>
           onSubmit({
+            name: "홍길동",
+            calendarType: "solar",
             birthDate: "1995-03-15",
             birthTime: "14:30",
             birthPlace: "서울",
-            interests: ["career", "love"],
+            interests: ["career_money", "love_relationship"],
             toneStyle: "warm",
           })
         }
