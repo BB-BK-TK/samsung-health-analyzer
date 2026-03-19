@@ -35,11 +35,13 @@ export class GooglePlayProvider implements ReviewSourceProvider {
       const batchSize = Math.min(200, limit - out.length);
       const res = (await gplay.reviews({
         appId: app.appId,
-        sort: gplay.sort.NEWEST,
+        // google-play-scraper type defs expose `sort` oddly; `2` is NEWEST.
+        sort: 2,
         num: batchSize,
         lang,
         country,
-        paginate: nextPaginationToken as unknown as string | undefined,
+        paginate: true,
+        nextPaginationToken: typeof nextPaginationToken === "string" ? nextPaginationToken : undefined,
       })) as unknown as { data?: unknown[]; nextPaginationToken?: unknown };
 
       const reviews = (res?.data ?? []) as unknown[];
