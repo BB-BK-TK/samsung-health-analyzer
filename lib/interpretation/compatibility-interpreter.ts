@@ -4,7 +4,6 @@
  */
 
 import type { AstrologyCompatibilityResult } from "@/types/result-schema";
-import { getSignContent } from "./astrology-content";
 import { getElementPairing, getModalityNote } from "./compatibility-content";
 
 export function interpretCompatibility(
@@ -16,7 +15,7 @@ export function interpretCompatibility(
   const pair = getElementPairing(sign1Meta.element, sign2Meta.element);
   const modalityNote = getModalityNote(sign1Meta.modality, sign2Meta.modality);
 
-  let score = 3 + pair.scoreDelta;
+  const score = 3 + pair.scoreDelta;
   const strengths: string[] = [];
   const challenges: string[] = [];
 

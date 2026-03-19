@@ -161,7 +161,7 @@ export function runCalculations(
       excess: analysis.excess,
       deficient: analysis.deficient,
       ilgan: saju.일간,
-      ilganInfo: saju.일간정보 as any,
+      ilganInfo: saju.일간정보 as unknown as { 상징: string; 장점: string; 단점: string; 성격: string },
       zodiacAnimal: saju.띠,
     },
   };

@@ -1,8 +1,22 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-// 환경 변수에서 정보를 가져옵니다.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// 다른 파일에서 이 'supabase'를 불러와서 쓸 수 있게 내보냅니다.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+/**
+ * Client-safe Supabase instance (anon key). Use only in browser / RLS-safe reads.
+ * Kept for backwards compatibility with existing app code.
+ */
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/**
+ * Server-side Supabase instance (service role). Use only in API routes / server actions.
+ * Requires SUPABASE_SERVICE_ROLE_KEY (do NOT expose publicly).
+ */
+export function getSupabaseAdmin() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl?.trim() || !serviceKey?.trim()) {
+    throw new Error("Supabase admin client unavailable: SUPABASE_SERVICE_ROLE_KEY not configured");
+  }
+  return createClient(supabaseUrl, serviceKey);
+}

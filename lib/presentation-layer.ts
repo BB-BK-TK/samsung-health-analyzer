@@ -4,7 +4,15 @@
  * styleReadyText is the slot for future LLM overwrite (Layer 4).
  */
 
-import type { AstrologyPeriodKey, ResultViewModel, HeroSummaryViewModel, DomainCardViewModel, WhyThisResultSection, MetadataTagViewModel } from "@/types/result-schema";
+import type {
+  AstrologyPeriodKey,
+  ResultViewModel,
+  HeroSummaryViewModel,
+  DomainCardViewModel,
+  WhyThisResultSection,
+  MetadataTagViewModel,
+  AstrologyInterpretationFacts,
+} from "@/types/result-schema";
 import type { CalculationResult } from "./calculation-layer";
 import type { AstrologyInterpreted, SajuInterpreted } from "./interpretation-layer";
 
@@ -234,7 +242,23 @@ export function buildResultViewModel(
           lucky: { colorKey: raw.lucky.color, number: raw.lucky.number, timeKey: raw.lucky.time },
           signInfo: raw.signInfo,
         },
-        interpretationFacts: interp?.interpretationFacts ?? ({} as any),
+        interpretationFacts:
+          interp?.interpretationFacts ??
+          ({
+            energy: raw.energy,
+            loveScore: raw.love.score,
+            careerScore: raw.career.score,
+            moneyScore: raw.money.score,
+            healthScore: raw.health.score,
+            loveStatus: raw.love.status,
+            careerStatus: raw.career.status,
+            moneyStatus: raw.money.status,
+            healthStatus: raw.health.status,
+            bodyPart: raw.health.bodyPart,
+            luckyColor: raw.lucky.color,
+            luckyNumber: raw.lucky.number,
+            luckyTime: raw.lucky.time,
+          } as AstrologyInterpretationFacts),
         interpretedSummary: interp?.interpretedSummary ?? raw.summary,
         domainCards: interp?.domainCards ?? [],
         personality: rich?.personality,
