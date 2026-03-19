@@ -13,6 +13,80 @@ export interface InterpretationResult {
   saju: SajuInterpreted;
 }
 
+const SIGN_ORDER_KO = [
+  "염소자리",
+  "물병자리",
+  "물고기자리",
+  "양자리",
+  "황소자리",
+  "쌍둥이자리",
+  "게자리",
+  "사자자리",
+  "처녀자리",
+  "천칭자리",
+  "전갈자리",
+  "사수자리",
+];
+
+function parseBirthDateParts(birthDate: string): { year: number; month: number; day: number } | null {
+  const parts = birthDate.split("-");
+  if (parts.length !== 3) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { year, month, day };
+}
+
+function parseBirthHour(birthTime?: string): number | null {
+  if (!birthTime) return null;
+  const [h] = birthTime.split(":");
+  const hour = Number(h);
+  if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
+  return hour;
+}
+
+function signByIndex(index: number): string {
+  const normalized = ((index % 12) + 12) % 12;
+  return SIGN_ORDER_KO[normalized];
+}
+
+/**
+ * Lightweight v1 approximation without ephemeris.
+ * - Moon: uses day-of-year + birth hour to give a date-dependent moon sign.
+ * - Rising: requires birth hour (2-hour cadence).
+ */
+function estimateMoonAndRising(
+  sunSignKo: string,
+  birthDate: string,
+  birthTime?: string
+): { moonSign: string; risingSign: string } {
+  const sunIndex = SIGN_ORDER_KO.indexOf(sunSignKo);
+  if (sunIndex < 0) return { moonSign: "정보 부족", risingSign: birthTime ? "정보 부족" : "출생시간 필요" };
+
+  const parts = parseBirthDateParts(birthDate);
+  const hour = parseBirthHour(birthTime);
+  if (!parts) return { moonSign: "정보 부족", risingSign: birthTime ? "정보 부족" : "출생시간 필요" };
+
+  const dateObj = new Date(parts.year, parts.month - 1, parts.day);
+  const startOfYear = new Date(parts.year, 0, 1);
+  const dayOfYear = Math.floor((dateObj.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+  // Moon roughly moves ~13deg/day -> ~1 sign per ~2.3 days.
+  const moonShift = Math.floor((dayOfYear * 13 + (hour ?? 12)) / 30);
+  const moonSign = signByIndex(sunIndex + moonShift);
+
+  if (hour == null) {
+    return { moonSign, risingSign: "출생시간 필요" };
+  }
+
+  // Ascendant approximation: 12 signs over 24 hours (2-hour blocks), starting from Aries-like point at 06:00.
+  const risingShift = Math.floor((((hour + 18) % 24) / 2));
+  const risingSign = signByIndex(risingShift + 3);
+  return { moonSign, risingSign };
+}
+
 function formatDateByTab(period: AstrologyPeriodKey, now: Date): string {
   if (period === "daily") return now.toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", weekday: "long" });
   if (period === "weekly") {
@@ -110,6 +184,14 @@ export function buildResultViewModel(
   const planets = [
     { name: "태양", symbol: "☉", sign: calculation.astrology.signKo, house: 1 },
   ];
+  const estimated = estimateMoonAndRising(
+    calculation.astrology.signKo,
+    options.birthDate,
+    options.birthTime
+  );
+  if (estimated.moonSign && estimated.moonSign !== "정보 부족") {
+    planets.push({ name: "달", symbol: "☽", sign: estimated.moonSign, house: 4 });
+  }
 
   const styleReadyText = {
     heroQuote,
@@ -177,8 +259,8 @@ export function buildResultViewModel(
       byPeriod: astrologyByPeriod,
       compatibility: calculation.astrology.compatibility,
       sunSign: calculation.astrology.signKo,
-      moonSign: "출생시간 필요",
-      risingSign: "출생시간 필요",
+      moonSign: estimated.moonSign,
+      risingSign: estimated.risingSign,
       planets,
     },
     saju: {
