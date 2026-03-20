@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { GlassCard } from "@/components/glass-card";
 import { StarBackground } from "@/components/star-background";
 import { TimeFilter, type TimeRangeValue } from "@/components/reviews/time-filter";
@@ -102,7 +103,17 @@ export default function ReviewsDashboardPage() {
       <StarBackground />
       <div className="relative z-10 max-w-[900px] mx-auto px-5 py-8 space-y-6">
         <header className="space-y-2">
-          <h1 className="text-2xl font-medium text-text-primary">Samsung Health Review Intelligence</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <Image
+              src="/cosmic5-logo.png"
+              alt="Cosmic 5"
+              width={200}
+              height={56}
+              className="h-11 w-auto max-w-[220px] object-contain object-left"
+              priority
+            />
+            <h1 className="text-2xl font-medium text-text-primary">Samsung Health Review Intelligence</h1>
+          </div>
           <p className="text-sm text-text-secondary">
             Pull Google Play reviews, analyze sentiment/topics, and summarize feedback by time range.
           </p>
